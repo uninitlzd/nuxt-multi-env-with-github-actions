@@ -1,0 +1,46 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy-prod:
+    name: Build and Deploy to Production
+    runs-on: ubuntu-latest
+    # Use the 'production' GitHub Environment
+    environment:
+      name: production
+    # Add a safety check to ensure it only runs on the main branch
+    if: github.ref_name == 'main'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: 'main'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Application
+        run: npm run generate
+        env:
+          NUXT_DEVTOOLS: false
+          NUXT_SOURCEMAP: false
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy to S3 (Production)
+        run: |
+          aws s3 sync .output/public s3://${{ vars.S3_BUCKET }} --delete
