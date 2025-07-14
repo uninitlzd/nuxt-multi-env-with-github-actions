@@ -1,3 +1,5 @@
+# .github/workflows/main.yml
+
 # Name of the workflow
 name: Build and Deploy Nuxt.js Site
 
@@ -27,46 +29,39 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-        # The ref will be the branch you select in the UI
         with:
           ref: ${{ github.ref }}
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 8
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'
+          cache: 'npm' # Use npm for caching
 
       - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci # Use npm ci for clean installs
 
-      # Build the Nuxt.js application with environment-specific settings
       - name: Build Application
-        run: pnpm run generate
+        run: npm run generate # Use npm to run the generate script
         env:
-          # Enable devtools only for develop and staging environments
           NUXT_DEVTOOLS: ${{ github.event.inputs.environment == 'develop' || github.event.inputs.environment == 'staging' }}
-          # Enable sourcemaps for all environments EXCEPT prod
           NUXT_SOURCEMAP: ${{ github.event.inputs.environment != 'prod' }}
 
-      # Upload the build output directory as an artifact
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: nuxt-build-output
           path: .output/public/
-          retention-days: 1 # Keep artifact for 1 day
+          retention-days: 1
 
-  # This job deploys the build artifact to the DEVELOPMENT environment
+  # This job deploys to the DEVELOPMENT environment
   deploy-dev:
     runs-on: ubuntu-latest
-    needs: build # This job depends on the 'build' job completing successfully
-    if: github.event.inputs.environment == 'develop' # Only run if 'develop' was selected
+    needs: build
+    if: github.event.inputs.environment == 'develop'
+    # Use the 'development' GitHub Environment
+    environment:
+      name: development
 
     steps:
       - name: Download artifact
@@ -83,13 +78,17 @@ jobs:
 
       - name: Deploy to S3 (Development)
         run: |
+          # Note: S3_BUCKET is now pulled from the 'development' environment secrets
           aws s3 sync . s3://${{ vars.S3_BUCKET }} --delete
 
-  # This job deploys the build artifact to the STAGING environment
+  # This job deploys to the STAGING environment
   deploy-staging:
     runs-on: ubuntu-latest
     needs: build
-    if: github.event.inputs.environment == 'staging' # Only run if 'staging' was selected
+    if: github.event.inputs.environment == 'staging'
+    # Use the 'staging' GitHub Environment
+    environment:
+      name: staging
 
     steps:
       - name: Download artifact
@@ -106,13 +105,17 @@ jobs:
 
       - name: Deploy to S3 (Staging)
         run: |
+          # Note: S3_BUCKET is now pulled from the 'staging' environment secrets
           aws s3 sync . s3://${{ vars.S3_BUCKET }} --delete
 
-  # This job deploys the build artifact to the PRODUCTION environment
+  # This job deploys to the PRODUCTION environment
   deploy-prod:
     runs-on: ubuntu-latest
     needs: build
-    if: github.event.inputs.environment == 'prod' # Only run if 'prod' was selected
+    if: github.event.inputs.environment == 'prod'
+    # Use the 'production' GitHub Environment
+    environment:
+      name: production
 
     steps:
       - name: Download artifact
@@ -129,4 +132,5 @@ jobs:
 
       - name: Deploy to S3 (Production)
         run: |
+          # Note: S3_BUCKET is now pulled from the 'production' environment secrets
           aws s3 sync . s3://${{ vars.S3_BUCKET }} --delete
