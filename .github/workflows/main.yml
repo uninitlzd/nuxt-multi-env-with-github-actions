@@ -83,7 +83,7 @@ jobs:
 
       - name: Deploy to S3 (Development)
         run: |
-          aws s3 sync . s3://${{ secrets.S3_BUCKET_DEV }} --delete
+          aws s3 sync . s3://${{ vars.S3_BUCKET }} --delete
 
   # This job deploys the build artifact to the STAGING environment
   deploy-staging:
@@ -106,7 +106,7 @@ jobs:
 
       - name: Deploy to S3 (Staging)
         run: |
-          aws s3 sync . s3://${{ secrets.S3_BUCKET_STAGING }} --delete
+          aws s3 sync . s3://${{ vars.S3_BUCKET }} --delete
 
   # This job deploys the build artifact to the PRODUCTION environment
   deploy-prod:
@@ -129,4 +129,4 @@ jobs:
 
       - name: Deploy to S3 (Production)
         run: |
-          aws s3 sync . s3://${{ secrets.S3_BUCKET_PROD }} --delete
+          aws s3 sync . s3://${{ vars.S3_BUCKET }} --delete
